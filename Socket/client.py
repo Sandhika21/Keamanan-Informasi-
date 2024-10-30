@@ -13,7 +13,7 @@ def asciiToBin(messages):
     return msg
 
 def binToAscii(messages):
-    return ''.join(chr(int(message[i*8 : (i+1)*8], 2)) for message in messages for i in range(8))
+    return ''.join(chr(int(message[i*8 : (i+1)*8], 2)) for message in messages for i in range(8)).rstrip('\x00')
     
 def permutation(shuffle_bits, binary):
     return ''.join(binary[bit - 1] for bit in shuffle_bits)
@@ -228,7 +228,7 @@ def main():
 
         received_data = server_socket.recv(1024).decode()
         decrypted_message = msg.decrypt_message(received_data)
-        print(f"RECV: \n\tCipherText : {received_data} \n\tPlainText : {decrypted_message}")
+        print(f"RECV: \n\tCipherText : {received_data} \n\tPlainText : {decrypted_message} | length: {len(decrypted_message)}")
         
 if __name__ == '__main__':
     main()
