@@ -215,7 +215,7 @@ def main():
     msg = Message(Key(key=asciiToBin(key)[0]).key_generator())
     
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.connect(('localhost', 98765))
+    server_socket.connect(('localhost', 65432))
 
     while True:
         message = input("SEND: ")
