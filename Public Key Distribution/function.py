@@ -276,7 +276,6 @@ print("Encrypted:", enc)
 dec = decrypt(enc, d, n)
 print("Decrypted:", dec)
 
-
 print(f'e : {e} | d : {d} | n : {n}')
 
 
