@@ -7,7 +7,7 @@ import random
 import sys
 
 class Initiator():
-    def __init__(self, IDA=None, des_key='aKiHDNaS', host='127.0.0.1', port=12345):
+    def __init__(self, IDA=None, des_key='aKiHDNaS', server_host='127.0.0.1', server_port=12345):
         self.des_key = des_key
         self.responder_session_key = None
         self.DES = function.DES_function(des_key)
@@ -20,13 +20,15 @@ class Initiator():
         self.isSuccess = False
         
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host, self.port = host, port
+        self.server_host, self.server_port = server_host, server_port
+        self.host, self.port = function.initiator_hp()
         self.responder_host, self.responder_port = function.responder_hp()
         self.PKA_host, self.PKA_port = function.PKA_hp()
         
     def connect_to_server(self):
         try:
-            self.socket.connect((self.host, self.port))
+            self.socket.bind((self.host, self.port))
+            self.socket.connect((self.server_host, self.server_port))
             self.connection_handling()
             
             Thread(target=self.rcv_message, daemon=True).start()
@@ -35,11 +37,17 @@ class Initiator():
                 content_dict = json.dumps({
                     'MSG' : content
                 })
-                msg = 'sending' if content != 'exit system' else 'exit system'
+                msg = 'sending'
+                if content == 'exit system':
+                    msg = 'exit system'
                 encrypted_content = self.responder_DES.encrypt_message(content_dict)
                 encrypted_message = self.create_message(msg, (self.responder_host, self.responder_port), encrypted_content)
                 self.socket.sendall(encrypted_message.encode())
-
+                if content == 'exit system':
+                    self.socket.close()
+                    break
+                
+                
         except Exception as e:
             print(f"Connection failed: {e}")
             self.socket.close()
@@ -92,6 +100,13 @@ class Initiator():
         
     def handshake(self):
         try:            
+            request_message = json.dumps({
+                'Message' : 'Request',
+                'Time Stamp' : time.asctime(time.localtime(time.time())),
+                'From' : 'Initiator',
+                'To' : 'PKA'
+            })
+            
             request_message = self.create_message('Request', (self.PKA_host, self.PKA_port))
             self.socket.sendall(request_message.encode())
             respond_PKA = self.receive_message()
