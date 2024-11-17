@@ -4,21 +4,22 @@ import socket
 import json
 import time
 import random
-import os
+import sys
 
 class Initiator():
-    def __init__(self, des_key='aKiHDNaS', IDA=None):
+    def __init__(self, IDA=None, des_key='aKiHDNaS'):
         self.des_key = des_key
-        self.responder_session_key = ''
+        self.responder_session_key = None
         self.DES = function.DES_function(des_key)
+        self.responder_DES = None
         self.e, self.d, self.n = function.initiator_key_pair()
         self.responder_e, self.responder_n = None, None
         self.PKA_e, _, self.PKA_n = function.PKA_key_pair()
         self.N1 = random.randint(1, 100)
         self.IDA = IDA
+        self.isSuccess = False
         
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.isSuccess = False
         self.host, self.port = function.initiator_hp()
         self.responder_host, self.responder_port = function.responder_hp()
         self.PKA_host, self.PKA_port = function.PKA_hp()
@@ -26,10 +27,24 @@ class Initiator():
     def connect_to_server(self):
         try:
             self.socket.connect((self.host, self.port))
-            Thread(target=self.connection_handling, daemon=True).start()
+            self.connection_handling()
+            
+            Thread(target=self.rcv_message, daemon=True).start()
+            while True:
+                message = input("Enter message : ")
+                encrypted_message = self.responder_DES.encrypt_message(message)
+                self.socket.sendall(encrypted_message.encode())
+
         except Exception as e:
             print(f"Connection failed: {e}")
-            os._exit(1) 
+            self.socket.close()
+            sys.exit(1)
+            
+    def rcv_message(self):
+        while True:
+            respond = self.receive_message()
+            decryted_respond = self.DES.decrypt_message(respond)
+            print(f"RECV: \n\tCipherText : {respond} \n\tPlainText : {decryted_respond} | length: {len(decryted_respond)}")
             
     def receive_message(self):
         data = b''
@@ -41,7 +56,8 @@ class Initiator():
                 data += packet
         except Exception as e:
             print(f"Error receiving message: {e}")
-            os._exit(1)
+            self.socket.close()
+            sys.exit(1)
         return data.decode()
             
     def connection_handling(self):
@@ -49,28 +65,23 @@ class Initiator():
             isHandshake = self.handshake()
             if not isHandshake:
                 self.socket.close()
-                os._exit(0)
-            session_content = {
-                'des_key' : self.des_key
-            }
-            session_msg = self.create_message('session key', (self.responder_host, self.responder_port), session_content)
-            e_session_msg = function.encrypt(session_msg, self.responder_e, self.responder_n)
-            self.socket.sendall(e_session_msg.encode())
-            responder_session_key = self.receive_message()
-            d_responder_session_key = function.encrypt(responder_session_key, self.d, self.n)
-            session_respond = json.loads(d_responder_session_key)
-            session_content = json.loads(session_respond['Content'])
-            self.responder_session_key = session_content['des_key']
-            
-            print("Session key has been distributed")
-
-            while True:
-                message = input("Enter message : ")
-                encrypted_message = self.DES.encrypt_message(message)
-                self.socket.sendall(encrypted_message.encode())
-                respond = self.receive_message()
-                decryted_respond = self.DES.decrypt_message(respond)
-                print(f"RECV: \n\tCipherText : {respond} \n\tPlainText : {decryted_respond} | length: {len(decryted_respond)}")
+                sys.exit(1)
+            self.isSuccess = True
+        
+        session_content = {
+            'des_key' : self.des_key
+        }
+        session_msg = self.create_message('session key', (self.responder_host, self.responder_port), session_content)
+        e_session_msg = function.encrypt(session_msg, self.responder_e, self.responder_n)
+        self.socket.sendall(e_session_msg.encode())
+        responder_session_key = self.receive_message()
+        d_responder_session_key = function.encrypt(responder_session_key, self.d, self.n)
+        session_respond = json.loads(d_responder_session_key)
+        session_content = json.loads(session_respond['Content'])
+        self.responder_session_key = session_content['des_key']
+        self.responder_DES = function.DES_function(self.responder_session_key)
+        
+        print("Session key has been distributed")
         
     def handshake(self):
         try:            
@@ -119,3 +130,6 @@ class Initiator():
             'To' : receiver,
             'Content' : content
         })
+
+init = Initiator(9)
+init.connect_to_server()

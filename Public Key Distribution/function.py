@@ -256,37 +256,37 @@ def responder_hp():
 def PKA_hp():
     return '127.0.0.1', 7632
 
+def main():
+    message = "Test Message"
+    e, d, n = PKA_key_pair()
 
-message = "Test Message"
-e, d, n = PKA_key_pair()
+    print(f'text : {message} | {len(message)}')
 
-print(f'text : {message} | {len(message)}')
+    enc = encrypt(message, e, n)
+    print("Encrypted:", enc)
 
-enc = encrypt(message, e, n)
-print("Encrypted:", enc)
+    dec = encrypt(enc, d, n)
+    print(f"Decrypted : {dec} | {len(dec)}")
 
-dec = encrypt(enc, d, n)
-print(f"Decrypted : {dec} | {len(dec)}")
+    print(f'e : {e} | d : {d} | n : {n}')
 
-print(f'e : {e} | d : {d} | n : {n}')
+    des = DES_function("t2Socket")
+    encrypted_message = des.encrypt_message(message)
+    print(encrypted_message)
+    decrypted_message = des.decrypt_message(encrypted_message)
+    print(decrypted_message, len(decrypted_message))
 
-des = DES_function("t2Socket")
-encrypted_message = des.encrypt_message(message)
-print(encrypted_message)
-decrypted_message = des.decrypt_message(encrypted_message)
-print(decrypted_message, len(decrypted_message))
+    dc = {
+        'a' : 1,
+        'b' : 2
+    }
 
-dc = {
-    'a' : 1,
-    'b' : 2
-}
+    st = json.dumps(dc)
 
-st = json.dumps(dc)
+    print(st)
 
-print(st)
+    e_st = encrypt(st, e, n)
+    print(e_st)
 
-e_st = encrypt(st, e, n)
-print(e_st)
-
-d_st = encrypt(e_st, d, n)
-print(d_st, st == d_st)
+    d_st = encrypt(e_st, d, n)
+    print(d_st, st == d_st)
