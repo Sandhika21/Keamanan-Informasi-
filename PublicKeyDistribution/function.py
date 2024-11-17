@@ -290,3 +290,9 @@ def main():
 
     d_st = encrypt(e_st, d, n)
     print(d_st, st == d_st)
+    
+    enc_st = des.encrypt_message(st)
+    print(enc_st)
+    dec_st = des.decrypt_message(enc_st)
+    print(dec_st, dec_st == st)
+    

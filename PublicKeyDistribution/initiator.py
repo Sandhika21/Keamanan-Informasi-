@@ -7,7 +7,7 @@ import random
 import sys
 
 class Initiator():
-    def __init__(self, IDA=None, des_key='aKiHDNaS'):
+    def __init__(self, IDA=None, des_key='aKiHDNaS', host='127.0.0.1', port=12345):
         self.des_key = des_key
         self.responder_session_key = None
         self.DES = function.DES_function(des_key)
@@ -20,7 +20,7 @@ class Initiator():
         self.isSuccess = False
         
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host, self.port = function.initiator_hp()
+        self.host, self.port = host, port
         self.responder_host, self.responder_port = function.responder_hp()
         self.PKA_host, self.PKA_port = function.PKA_hp()
         
@@ -31,8 +31,13 @@ class Initiator():
             
             Thread(target=self.rcv_message, daemon=True).start()
             while True:
-                message = input("Enter message : ")
-                encrypted_message = self.responder_DES.encrypt_message(message)
+                content = input("Enter message : ")
+                content_dict = json.dumps({
+                    'MSG' : content
+                })
+                msg = 'sending' if content != 'exit system' else 'exit system'
+                encrypted_content = self.responder_DES.encrypt_message(content_dict)
+                encrypted_message = self.create_message(msg, (self.responder_host, self.responder_port), encrypted_content)
                 self.socket.sendall(encrypted_message.encode())
 
         except Exception as e:
@@ -43,8 +48,10 @@ class Initiator():
     def rcv_message(self):
         while True:
             respond = self.receive_message()
-            decryted_respond = self.DES.decrypt_message(respond)
-            print(f"RECV: \n\tCipherText : {respond} \n\tPlainText : {decryted_respond} | length: {len(decryted_respond)}")
+            respond_dict = json.loads(respond)
+            decode_content = self.DES.decrypt_message(respond_dict['Content'])
+            content_dict = json.loads(decode_content)
+            print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict)}")
             
     def receive_message(self):
         data = b''
@@ -68,16 +75,16 @@ class Initiator():
                 sys.exit(1)
             self.isSuccess = True
         
-        session_content = {
+        session_content = json.dumps({
             'des_key' : self.des_key
-        }
-        session_msg = self.create_message('session key', (self.responder_host, self.responder_port), session_content)
-        e_session_msg = function.encrypt(session_msg, self.responder_e, self.responder_n)
-        self.socket.sendall(e_session_msg.encode())
+        })
+        e_session_content = function.encrypt(session_content, self.responder_e, self.responder_n)
+        session_msg = self.create_message('session key', (self.responder_host, self.responder_port), e_session_content)
+        self.socket.sendall(session_msg.encode())
         responder_session_key = self.receive_message()
-        d_responder_session_key = function.encrypt(responder_session_key, self.d, self.n)
-        session_respond = json.loads(d_responder_session_key)
-        session_content = json.loads(session_respond['Content'])
+        session_respond = json.loads(responder_session_key)
+        d_session_respond = function.encrypt(session_respond['Content'], self.d, self.n)
+        session_content = json.loads(d_session_respond)
         self.responder_session_key = session_content['des_key']
         self.responder_DES = function.DES_function(self.responder_session_key)
         
@@ -88,22 +95,24 @@ class Initiator():
             request_message = self.create_message('Request', (self.PKA_host, self.PKA_port))
             self.socket.sendall(request_message.encode())
             respond_PKA = self.receive_message()
-            d_respond_PKA = function.encrypt(respond_PKA, self.PKA_e, self.PKA_n)
-            PKA_respond = json.loads(d_respond_PKA)
-            PKA_content = json.loads(PKA_respond['Content'])
+            PKA_respond = json.loads(respond_PKA)
+            d_content_PKA = function.encrypt(PKA_respond['Content'], self.PKA_e, self.PKA_n)
+            PKA_content = json.loads(d_content_PKA)
+            
             
             self.responder_e, self.responder_n = PKA_content['Public Key']
             check_content = json.dumps({
                 'myN' : self.N1,
                 'ID' : self.IDA
             })
-            checking_msg = self.create_message('to Responder', (self.responder_host, self.responder_port), check_content)
-            e_checking_msg = function.encrypt(checking_msg, self.responder_e, self.responder_n)
-            self.socket.sendall(e_checking_msg.encode())
-            check_responder = self.receive_message()
-            d_check_responder = function.encrypt(check_responder, self.d, self.n)
-            check_respond = json.loads(d_check_responder)
-            check_content = json.loads(check_respond['Content'])
+            e_check_content = function.encrypt(check_content, self.responder_e, self.responder_n)
+            checking_msg = self.create_message('to Responder', (self.responder_host, self.responder_port), e_check_content) 
+            self.socket.sendall(checking_msg.encode())
+            check_responder = self.receive_message()            
+            check_respond = json.loads(check_responder)
+            d_check_content = function.encrypt(check_respond['Content'], self.d, self.n)
+            check_content = json.loads(d_check_content)
+            
             
             if check_content['yourN'] != self.N1:
                 return False
@@ -111,9 +120,10 @@ class Initiator():
             confirm_content = json.dumps({
                 'yourN' : check_content['myN']
             })        
-            confirm_msg = self.create_message('confirm', (self.responder_host, self.responder_port), confirm_content)
-            e_confirm_msg = function.encrypt(confirm_msg, self.responder_e, self.responder_n)
-            self.socket.sendall(e_confirm_msg.encode())
+            e_confirm_content = function.encrypt(confirm_content, self.responder_e, self.responder_n)
+            confirm_msg = self.create_message('confirm', (self.responder_host, self.responder_port), e_confirm_content)
+            
+            self.socket.sendall(confirm_msg.encode())
             
             self.isSuccess = True
             return True
