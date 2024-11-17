@@ -1,3 +1,5 @@
+import json
+
 def asciiToBin(messages):
     size = divmod(len(messages), 8)
     msg = []
@@ -245,6 +247,15 @@ def PKA_key_pair():
 def encrypt(text, key, n):
     return ''.join(chr((ord(char)**key) % n) for char in text)
 
+def initiator_hp():
+    return '127.0.0.1', 64191
+
+def responder_hp():
+    return '127.0.0.1', 64654
+
+def PKA_hp():
+    return '127.0.0.1', 7632
+
 
 message = "Test Message"
 e, d, n = PKA_key_pair()
@@ -264,4 +275,18 @@ encrypted_message = des.encrypt_message(message)
 print(encrypted_message)
 decrypted_message = des.decrypt_message(encrypted_message)
 print(decrypted_message, len(decrypted_message))
-    
+
+dc = {
+    'a' : 1,
+    'b' : 2
+}
+
+st = json.dumps(dc)
+
+print(st)
+
+e_st = encrypt(st, e, n)
+print(e_st)
+
+d_st = encrypt(e_st, d, n)
+print(d_st, st == d_st)
