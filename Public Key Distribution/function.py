@@ -1,5 +1,3 @@
-import base64
-
 def asciiToBin(messages):
     size = divmod(len(messages), 8)
     msg = []
@@ -209,6 +207,10 @@ class Message():
                 inv_ip.append(((4*isEven + interval)*8) - i)
         return inv_ip
 
+def DES_function(des_key):
+    return Message(Key(key=asciiToBin(des_key)[0]).key_generator())
+    
+
 def gcd(num1, num2):
     if num2 == 0:
         return num1
@@ -232,51 +234,34 @@ def generate_keys(prime1, prime2):
     return e, d, n
 
 def initiator_key_pair():
-    return generate_keys(997, 991)
+    return generate_keys(199, 211)
 
 def responder_key_pair():
-    return generate_keys(83, 101)
+    return generate_keys(181, 191)
 
 def PKA_key_pair():
-    return generate_keys()
+    return generate_keys(997, 991)
 
-def base64_to_int(base64_string):
-    decoded_bytes = base64.b64decode(base64_string)
-    return int.from_bytes(decoded_bytes, byteorder='big')
-
-def encrypt1(message, n, e):
-    encrypted_chars = []
-    for char in message:
-        char_int = ord(char)
-        encrypted_char = pow(char_int, e, n)
-        encrypted_chars.append(encrypted_char)
-    return encrypted_chars
-
-def decrypt1(encrypted_text, n, d):
-    decrypted_message = ""
-    for char in encrypted_text:
-        decrypted_int = pow(char, d, n)
-        decrypted_message += chr(decrypted_int)
-    return decrypted_message
-
-def encrypt(plaintext, e, n):
-    return [((ord(char)**e) % n) for char in plaintext]
-
-
-def decrypt(ciphertext, key, n):
-    return ''.join(chr((char**key) % n) for char in ciphertext)
+def encrypt(text, key, n):
+    return ''.join(chr((ord(char)**key) % n) for char in text)
 
 
 message = "Test Message"
-e, d, n = initiator_key_pair()
+e, d, n = PKA_key_pair()
+
+print(f'text : {message} | {len(message)}')
 
 enc = encrypt(message, e, n)
 print("Encrypted:", enc)
 
-dec = decrypt(enc, d, n)
-print("Decrypted:", dec)
+dec = encrypt(enc, d, n)
+print(f"Decrypted : {dec} | {len(dec)}")
 
 print(f'e : {e} | d : {d} | n : {n}')
 
-
+des = DES_function("t2Socket")
+encrypted_message = des.encrypt_message(message)
+print(encrypted_message)
+decrypted_message = des.decrypt_message(encrypted_message)
+print(decrypted_message, len(decrypted_message))
     
