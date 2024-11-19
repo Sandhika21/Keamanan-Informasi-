@@ -99,21 +99,13 @@ class Initiator():
         print("Session key has been distributed")
         
     def handshake(self):
-        try:            
-            request_message = json.dumps({
-                'Message' : 'Request',
-                'Time Stamp' : time.asctime(time.localtime(time.time())),
-                'From' : 'Initiator',
-                'To' : 'PKA'
-            })
-            
+        try:                        
             request_message = self.create_message('Request', (self.PKA_host, self.PKA_port))
             self.socket.sendall(request_message.encode())
             respond_PKA = self.receive_message()
             PKA_respond = json.loads(respond_PKA)
             d_content_PKA = function.encrypt(PKA_respond['Content'], self.PKA_e, self.PKA_n)
             PKA_content = json.loads(d_content_PKA)
-            
             
             self.responder_e, self.responder_n = PKA_content['Public Key']
             check_content = json.dumps({
