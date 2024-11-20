@@ -1,62 +1,51 @@
-import function
-import json
 import socket
-from threading import Thread
+import json
+import function
 
 class Responder():
-    def __init__(self, host='127.0.0.1', port=64654):
+    def __init__(self, host='127.0.0.1', port=64654, pka_host='127.0.0.1', pka_port=7632):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.host, self.port = host, port
-        self.socket.bind((self.host, self.port))
-        self.socket.listen(5)
-        self.clients = {}
-        self.des_key = None
+        self.host = host
+        self.port = port
+        self.pka_host = pka_host
+        self.pka_port = pka_port
         self.e, self.d, self.n = function.responder_key_pair()
+        self.PKA_e, _, self.PKA_n = function.PKA_key_pair()
+        self.des_key = None
+        self.des = None
+    
+    def connect_to_pka(self):
+        self.socket.connect((self.pka_host, self.pka_port))
+        self.request_public_key()
 
-    def listen(self):
+    def request_public_key(self):
+        request_message = "Request"
+        self.socket.sendall(request_message.encode())
+        response = self.socket.recv(1024).decode()
+        self.handle_pka_response(response)
+
+    def handle_pka_response(self, response):
+        pka_data = json.loads(response)
+        self.PKA_e, self.PKA_n = pka_data['Public Key']
+
+    def receive_des_key(self):
+        encrypted_des_key = self.socket.recv(1024).decode()
+        des_key = function.encrypt(encrypted_des_key, self.d, self.n)
+        self.des_key = json.loads(des_key)['des_key']
+        self.des = function.DES_function(self.des_key)
+    
+    def decrypt_message(self, encrypted_message):
+        return self.des.decrypt_message(encrypted_message)
+
+    def start(self):
+        self.connect_to_pka()
+        self.receive_des_key()
+  
         while True:
-            client_socket, client_address = self.socket.accept()
-            self.clients[client_address] = client_socket
-            print(f"Connection from: {client_address}")
-            Thread(target=self.handle_client, args=(client_socket,)).start()
-
-    def handle_client(self, client_socket):
-        try:
-            message = self.receive_message(client_socket)
-            msg_dict = json.loads(message)
-            if msg_dict['Message'] == 'to Responder':
-                content = json.loads(function.encrypt(msg_dict['Content'], self.d, self.n))
-                N1 = content['myN']
-                response_content = json.dumps({'myN': N1, 'yourN': N1})
-                encrypted_response = function.encrypt(response_content, content['Public Key'][0], content['Public Key'][1])
-                response_message = self.create_message('Response', encrypted_response)
-                client_socket.sendall(response_message.encode())
-            elif msg_dict['Message'] == 'session key':
-                encrypted_des_key = msg_dict['Content']
-                des_key_content = json.loads(function.encrypt(encrypted_des_key, self.d, self.n))
-                self.des_key = des_key_content['des_key']
-                print(f"Received DES key: {self.des_key}")
-        except Exception as e:
-            print(f"Error handling client: {e}")
-            client_socket.close()
-
-    def receive_message(self, client_socket):
-        data = b''
-        try:
-            while True:
-                packet = client_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-        return data.decode()
-
-    def create_message(self, message, content=None):
-        return json.dumps({
-            'Message': message,
-            'Content': content
-        })
+            encrypted_message = self.socket.recv(1024).decode()
+            print(f"Pesan terenkripsi yang diterima: {encrypted_message}")
+            decrypted_message = self.decrypt_message(encrypted_message)
+            print(f"Pesan yang telah didekripsi: {decrypted_message}")
 
 responder = Responder()
-responder.listen()
+responder.start()
