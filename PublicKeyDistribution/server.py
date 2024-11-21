@@ -16,7 +16,6 @@ class Server():
             client_socket, client_address = self.socket.accept()
             msg_id = client_socket.recv(1024).decode()
             client_id = json.loads(msg_id)
-            print(client_id)
             self.Clients[client_id['Client ID']] = client_socket  
             print("Connection from: " + str(client_address))
             Thread(target = self.handle_new_client, args = (client_address, client_socket,)).start()
@@ -25,7 +24,6 @@ class Server():
         while True:
             message = client_socket.recv(1024).decode()
             msg_dict = json.loads(message)
-            print(msg_dict)
             if msg_dict['Message'].strip() == 'exit system':
                 del self.Clients[client_address]
                 client_socket.close()
@@ -34,20 +32,6 @@ class Server():
                 receiver_id = msg_dict['To']
                 receiver_socket = self.Clients[receiver_id]
                 receiver_socket.send(message.encode())
-    
-    def receive_message(self, client_socket):
-        data = b''
-        try:
-            while True:
-                packet = client_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-            self.socket.close()
-            sys.exit(1)
-        return data.decode()
     
 server = Server()
 server.listen()

@@ -13,29 +13,23 @@ class PKA():
         self.public_keys = {
             'Initiator' : function.initiator_key_pair(),
             'Responder' : function.responder_key_pair()
-        }  
-        self.Clients = {}
+        } 
         self.e, self.d, self.n = function.PKA_key_pair()
 
     def listen(self):
         while True:
             client_socket, client_address = self.socket.accept()
             msg_id = client_socket.recv(1024).decode()
-            client_id = json.loads(msg_id)
-            self.Clients[client_id['Client ID']] = client_socket    
             
             print(f"Connection from: {client_address}")
             Thread(target=self.handle_client, args=(client_socket,)).start()
 
     def handle_client(self, client_socket):
         try:
-            print('pka')
             message = client_socket.recv(1024).decode()
             msg_dict = json.loads(message)
-            print(msg_dict)
             if msg_dict['Message'] == 'request key':
                 client_id = msg_dict['Client ID']
-                print(client_id)
                 if client_id in self.public_keys:
                     public_key = json.dumps({
                         'Public Key' : self.public_keys[client_id]

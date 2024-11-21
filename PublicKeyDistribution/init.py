@@ -120,12 +120,12 @@ class Initiator():
         session_content = json.loads(d_session_respond)
         self.responder_session_key = session_content['des_key']
         self.responder_DES = function.DES_function(self.responder_session_key)
+        print(f'Responder DES key = {self.responder_session_key}')
         
         print("Session key has been distributed")
         
     def handshake(self):
         try:                        
-            print('2')
             request_message = json.dumps({
                 'Message' : 'request key',
                 'Time Stamp' : time.asctime(time.localtime(time.time())),
@@ -134,12 +134,13 @@ class Initiator():
             })
             self.PKA_socket.send(request_message.encode())
             respond_PKA = self.PKA_socket.recv(1024).decode()
-            print(respond_PKA)
             PKA_respond = json.loads(respond_PKA)
             d_content_PKA = function.encrypt(PKA_respond['Content'], self.PKA_e, self.PKA_n)
             PKA_content = json.loads(d_content_PKA)
             
             self.responder_e, _, self.responder_n = PKA_content['Public Key']
+            print(f'Initiator public key : e = {self.responder_e}, n = {self.responder_n}')
+            
             check_content = json.dumps({
                 'myN' : self.N1,
                 'ID' : self.IDA
@@ -159,6 +160,8 @@ class Initiator():
             confirm_content = json.dumps({
                 'yourN' : check_content['myN']
             })        
+            print(f'Responder N2 = {check_content["myN"]}')
+                        
             e_confirm_content = function.encrypt(confirm_content, self.responder_e, self.responder_n)
             confirm_msg = self.create_message('confirm', 'Responder', e_confirm_content)
             

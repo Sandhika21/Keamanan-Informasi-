@@ -116,6 +116,7 @@ class Responder():
         session_content = json.loads(d_session_respond)
         self.initiator_session_key = session_content['des_key']
         self.initiator_DES = function.DES_function(self.initiator_session_key)
+        print(f'Initiator DES key = {self.initiator_session_key}')
         
         session_content = json.dumps({
             'des_key' : self.des_key
@@ -147,10 +148,14 @@ class Responder():
             PKA_content = json.loads(d_content_PKA)
             self.initiator_e, _, self.initiator_n = PKA_content['Public Key']
             
+            print(f'Initiator public key : e = {self.initiator_e}, n = {self.initiator_n}')
+            
             respond_content = json.dumps({
                 'myN' : self.N2,
                 'yourN' : check_content['myN'],
             })
+            print(f'Initiator N1 = {check_content["myN"]}')
+            
             e_respond_content = function.encrypt(respond_content, self.initiator_e, self.initiator_n)
             respond_msg = self.create_message('to Responder', 'Initiator', e_respond_content) 
             self.server_socket.send(respond_msg.encode())
