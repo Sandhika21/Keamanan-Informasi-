@@ -73,34 +73,6 @@ class Responder():
             content_dict = json.loads(decode_content)
             print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict['MSG'])}")
             
-    def receive_message_server(self):
-        data = b''
-        try:
-            while True:
-                packet = self.server_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-            self.server_socket.close()
-            sys.exit(1)
-        return data.decode()
-    
-    def receive_message_pka(self):
-        data = b''
-        try:
-            while True:
-                packet = self.PKA_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-            self.PKA_socket.close()
-            sys.exit(1)
-        return data.decode()
-            
     def connection_handling(self):
         if not self.isSuccess:
             isHandshake = self.handshake()
@@ -157,7 +129,7 @@ class Responder():
             print(f'Initiator N1 = {check_content["myN"]}')
             
             e_respond_content = function.encrypt(respond_content, self.initiator_e, self.initiator_n)
-            respond_msg = self.create_message('to Responder', 'Initiator', e_respond_content) 
+            respond_msg = self.create_message('to Initiator', 'Initiator', e_respond_content) 
             self.server_socket.send(respond_msg.encode())
             
             confirm_initiator = self.server_socket.recv(1024).decode()

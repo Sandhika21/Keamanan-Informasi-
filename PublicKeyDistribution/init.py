@@ -72,34 +72,6 @@ class Initiator():
             content_dict = json.loads(decode_content)
             print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict['MSG'])}")
             
-    def receive_message_server(self):
-        data = b''
-        try:
-            while True:
-                packet = self.server_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-            self.server_socket.close()
-            sys.exit(1)
-        return data.decode()
-    
-    def receive_message_pka(self):
-        data = b''
-        try:
-            while True:
-                packet = self.PKA_socket.recv(1024)
-                if not packet:
-                    break
-                data += packet
-        except Exception as e:
-            print(f"Error receiving message: {e}")
-            self.PKA_socket.close()
-            sys.exit(1)
-        return data.decode()
-            
     def connection_handling(self):
         if not self.isSuccess:
             isHandshake = self.handshake()
