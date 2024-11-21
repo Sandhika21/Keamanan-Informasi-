@@ -16,14 +16,15 @@ class Server():
             client_socket, client_address = self.socket.accept()
             self.Clients[client_address] = client_socket  
             print("Connection from: " + str(client_address))
-                      
             Thread(target = self.handle_new_client, args = (client_address, client_socket,)).start()
             
     def handle_new_client(self, client_address, client_socket):
         while True:
             message = self.receive_message(client_socket)
+            if not message:
+                print(f"Client {client_address} disconnected or sent empty data.")
             msg_dict = json.loads(message)
-            if msg_dict['Message'].strip() == 'exit system':
+            if msg_dict['Message'].strip() == 'exit system' or not msg_dict['Message'].strip():
                 del self.Clients[client_address]
                 client_socket.close()
                 break
