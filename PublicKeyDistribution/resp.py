@@ -7,25 +7,24 @@ import random
 import sys
 
 class Responder():
-    def __init__(self, des_key='aKiHDNaS'):
+    def __init__(self, des_key='sAndhIkA'):
         self.DES = function.DES_function(des_key)
         self.des_key = des_key        
         self.e, self.d, self.n = function.responder_key_pair()
-        self.ID_dev = {function.ID_init() : function.initiator_hp()}
+        self.ID_dev = None
         self.N2 = random.randint(100, 10000)
         self.isSuccess = False
         
         self.initiator_session_key = None
         self.initiator_DES = None
         self.initiator_e, self.initiator_n = None, None
-        self.initiator_host, self.initiator_port = None, None
         
         self.PKA_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.PKA_host, self.PKA_port = function.PKA_hp()
+        self.PKA_host, self.PKA_port = '127.0.0.1', 2345
         self.PKA_e, _, self.PKA_n = function.PKA_key_pair()
         
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_host, self.server_port = function.server_hp()
+        self.server_host, self.server_port = '127.0.0.1', 54321
         
         
         
@@ -46,7 +45,7 @@ class Responder():
             if self.isSuccess:
                 Thread(target=self.rcv_message, daemon=True).start()
                 while True:
-                    content = input("Enter message : ")
+                    content = input()
                     content_dict = json.dumps({
                         'MSG' : content
                     })
@@ -68,11 +67,11 @@ class Responder():
             
     def rcv_message(self):
         while True:
-            respond = self.receive_message_server()
+            respond = self.server_socket.recv(1024).decode()
             respond_dict = json.loads(respond)
             decode_content = self.DES.decrypt_message(respond_dict['Content'])
             content_dict = json.loads(decode_content)
-            print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict)}")
+            print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict['MSG'])}")
             
     def receive_message_server(self):
         data = b''
@@ -128,14 +127,12 @@ class Responder():
         print("Session key has been distributed")
         
     def handshake(self):
-        try:                  
-            print('1')      
+        try:
             check_initiator = self.server_socket.recv(1024).decode()           
             check_respond = json.loads(check_initiator)
             d_check_content = function.encrypt(check_respond['Content'], self.d, self.n)
             check_content = json.loads(d_check_content)
-            self.initiator_host, self.initiator_port = self.ID_dev[check_content['ID']]
-            print(self.ID_dev[check_content['ID']])
+            self.ID_dev = check_content['ID']
 
             request_message = json.dumps({
                 'Message' : 'request key',

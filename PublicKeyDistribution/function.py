@@ -253,17 +253,9 @@ def initiator_hp():
 def responder_hp():
     return '127.0.0.1', 64654
 
-def init_PKA_hp():
-    return '127.0.0.1', 19146
+def ID_init():
+    return 109
 
-def resp_PKA_hp():
-    return '127.0.0.1', 45646
-
-def PKA_hp():
-    return '127.0.0.1', 7632
-
-def server_hp():
-    return '127.0.0.1', 12345
 
 
 

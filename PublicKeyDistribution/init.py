@@ -18,17 +18,14 @@ class Initiator():
         self.responder_session_key = None
         self.responder_DES = None
         self.responder_e, self.responder_n = None, None
-        self.responder_host, self.responder_port = function.responder_hp()
         
         self.PKA_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.PKA_host, self.PKA_port = function.PKA_hp()
-        self.PKA_init_host, self.PKA_init_port = function.init_PKA_hp()
+        self.PKA_host, self.PKA_port = '127.0.0.1', 2345
         self.PKA_e, _, self.PKA_n = function.PKA_key_pair()
         
         
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_host, self.server_port = function.server_hp()
-        self.server_init_host, self.server_init_port = function.initiator_hp()
+        self.server_host, self.server_port = '127.0.0.1', 54321
 
     def connect_to_server(self):
         try:
@@ -47,7 +44,7 @@ class Initiator():
             if self.isSuccess:
                 Thread(target=self.rcv_message, daemon=True).start()
                 while True:
-                    content = input("Enter message : ")
+                    content = input()
                     content_dict = json.dumps({
                         'MSG' : content
                     })
@@ -55,7 +52,7 @@ class Initiator():
                     if content == 'exit system':
                         msg = 'exit system'
                     encrypted_content = self.responder_DES.encrypt_message(content_dict)
-                    encrypted_message = self.create_message(msg, (self.server_init_host, self.server_init_port), (self.responder_host, self.responder_port), encrypted_content)
+                    encrypted_message = self.create_message(msg, 'Responder', encrypted_content)
                     self.server_socket.send(encrypted_message.encode())
                     if content == 'exit system':
                         self.server_socket.close()
@@ -69,11 +66,11 @@ class Initiator():
             
     def rcv_message(self):
         while True:
-            respond = self.receive_message_server()
+            respond = self.server_socket.recv(1024).decode()
             respond_dict = json.loads(respond)
             decode_content = self.DES.decrypt_message(respond_dict['Content'])
             content_dict = json.loads(decode_content)
-            print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict)}")
+            print(f"RECV: \n\t{content_dict['MSG']} | length: {len(content_dict['MSG'])}")
             
     def receive_message_server(self):
         data = b''
